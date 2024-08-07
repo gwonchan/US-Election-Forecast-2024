@@ -3,7 +3,7 @@ title: "stat2final"
 output: html_document
 date: "2024-08-05"
 ---
-forked from https://github.com/taliafabs/US-Election-Forecast-2024/blob/main/scripts/01-data_cleaning-survey.R
+inspired by https://github.com/taliafabs/US-Election-Forecast-2024/blob/main/scripts/01-data_cleaning-survey.R
 data from https://americaspoliticalpulse.com/
 
 1. data prep
@@ -43,124 +43,95 @@ reduced_survey_data1 <- raw_survey_data |>
          urbanicity2
          )
 
-# clean state names to match IPUMS ACS post stratification data set
-names_matcher <- tibble(stateicp = state.name, inputstate = state.abb)
-
-# Filter out people who:
-#   - 1. have no party affiliation or leaning  
-#   - 2. did not vote for Trump or biden in 2020
-# it is not practical to decipher their 2024 vote choice from this survey data set.
-
-reduced_survey_data2 <- reduced_survey_data1 |>
-  filter(presvote20post == "Joe Biden" | 
-           presvote20post == "Donald Trump" |
-           pid7 != "Independent")
-
-reduced_survey_data2 <- reduced_survey_data2 |>
-  mutate(
-    age_bracket = case_when(age < 30 ~ "18-29",
-                            age < 45 ~ "30-44",
-                            age < 60 ~ "45-59",
-                            age >= 60 ~ "60+"),
-    # explain how the vote_biden variable was calculated in the data section
-    vote_biden = ifelse(((pid7 == "Not very strong Democrat" |
-                           pid7 == "Lean Democrat" |
-                           pid7 == "Strong Democrat") & presvote16post != "Donald Trump" & presvote20post != "Donald Trump"), 
-                        1, 
-                        0),
-    vote24 = ifelse(((pid7 == "Not very strong Democrat" |
-                        pid7 == "Lean Democrat" |
-                        pid7 == "Strong Democrat" ) & presvote16post != "Donald Trump" & presvote20post != "Donald Trump"), 
-                    "Joe biden", 
-                    "Donald Trump"),
-    sex = ifelse(gender == "Female", "female", "male"),
-    # create a races variable and do the same for the post stratification data
-    races = case_when(race=="White" ~ "white",
-                      race=="Black" ~ "black",
-                      race=="Hispanic" ~ "other",
-                      race=="Native American" ~ "native american",
-                      race=="Asian" ~ "asian",
-                      (race == "Middle Eastern" | race == "Other") ~ "other",
-                      race == "Two or more races" ~ "mixed"
-    ),
-    # indicator variables for race
-    race_white = ifelse(race == "White", 1, 0),
-    race_asian = ifelse(race == "Asian", 1, 0),
-    race_black = ifelse(race == "Black", 1, 0),
-    race_hispanic = ifelse(race == "Hispanic", "hispanic", "not hispanic"),
-    race_native = ifelse(race == "Native American", 1, 0),
-    # indicator variable for whether they live in an urban or rural area
-    urban = ifelse((urbanicity2 == "Big city"| urbanicity2 == "Smaller city"), "urban", "rural"),
-  )
-
-
-survey_analysis_data <- reduced_survey_data2 |>
-  select(vote24, vote_biden, pid7, presvote16post, presvote20post, ideo5, birthyr, age, age_bracket, sex, races, race_white,
-         race_asian, race_black, race_hispanic, race_native, marstat, educ, faminc_new,
-         inputstate, urban)
-
-# rename educ to education_level to make format match with poststratification data
-survey_analysis_data <- survey_analysis_data|>
-  rename(education_level = educ)
-
-# # Apply state abbreviation to full name conversion using names_matcher
-# survey_analysis_data <- survey_analysis_data %>%
-#   left_join(names_matcher, by = c("state" = "inputstate")) %>%
-#   mutate(state = stateicp) %>%
-#   select(-stateicp)
-# 
-# # Now, state column has the full names of the states
-
-survey_analysis_data <- survey_analysis_data |>
-  rename(state = inputstate)
-
-# make these categorical and match the post stratification formats
-survey_analysis_data$sex <- as.factor(survey_analysis_data$sex)
-survey_analysis_data$races <- as.factor(survey_analysis_data$races)
-survey_analysis_data$state <- as.factor(survey_analysis_data$state)
-survey_analysis_data$education_level <- as.factor(survey_analysis_data$education_level)
-survey_analysis_data$faminc_new <- as.factor(survey_analysis_data$faminc_new)
-
-
-
 ```
 
 2. EDA-bar plots
 
 ```{r cars}
 library(GGally)
-ggpairs(survey_analysis_data[, c("vote24", "sex", "age_bracket", "races", "race_hispanic", "education_level", "urban" ,"marstat")])
+ggpairs(reduced_survey_data1[, c("pid3", "gender", "age", "race", "educ", "employ", "urbanicity2")])
+```
+bar plot by state : north dakota missing
+
+```{r}
+# Create a vector of state classifications
+red_states <- c("Alabama", "Alaska", "Arkansas", "Idaho", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Mississippi", "Missouri", "Montana", "Nebraska", "North Dakota", "Oklahoma", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "West Virginia", "Wyoming")
+blue_states <- c("California", "Connecticut", "Delaware", "Hawaii", "Illinois", "Maine", "Maryland", "Massachusetts", "Minnesota", "New Jersey", "New Mexico", "New York", "Oregon", "Rhode Island", "Vermont", "Virginia", "Washington")
+swing_states <- c("Arizona", "Colorado", "Florida", "Georgia", "Michigan", "Nevada", "New Hampshire", "North Carolina", "Ohio", "Pennsylvania", "Wisconsin")
+
+# Load necessary library
+library(ggplot2)
+
+# Assuming reduced_survey_data1$inputstate is your data vector
+
+# Count occurrences of each state
+state_counts <- table(reduced_survey_data1$inputstate)
+
+# Convert the table to a data frame
+state_df <- as.data.frame(state_counts)
+
+# Rename the columns for clarity
+colnames(state_df) <- c("State", "Count")
+
+# Update Color column based on state classifications
+state_df$Color <- ifelse(state_df$State %in% red_states, "red",
+                         ifelse(state_df$State %in% blue_states, "blue",
+                                ifelse(state_df$State %in% swing_states, "green", "grey")))
+
+# Create the bar plot with color coding
+ggplot(state_df, aes(x = reorder(State, -Count), y = Count, fill = Color)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("red" = "red", "blue" = "blue", "green" = "green", "grey" = "grey")) +
+  labs(x = "State", y = "Count", title = "Number of Occurrences by State") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) # Rotate x-axis labels for better readability
+
+
 
 ```
-
 clustering
 
 ```{r, echo=FALSE}
-
+# Load necessary libraries
 library(dplyr)
 library(tidyr)
-library(cluster)  # for clustering functions
-library(factoextra)  # for visualization of clustering results
+library(caret)  # For preprocessing
 
-# Prepare the data
-data_for_clustering <- survey_analysis_data %>%
-  select(vote24, vote_biden, pid7, presvote16post, presvote20post, ideo5, birthyr, age, age_bracket, sex, races, race_white, race_asian, race_black, race_hispanic) %>%
-  mutate(across(where(is.character), as.factor)) %>%
-  mutate(across(where(is.factor), as.numeric)) %>%
-  scale()  # Standardize numerical features
+# Handle missing values (example: remove rows with missing values)
+reduced_survey_data1 <- na.omit(reduced_survey_data1)
 
-# Determine the number of clusters (using the Elbow Method)
-fviz_nbclust(data_for_clustering, kmeans, method = "wss")
+# Encode categorical variables using one-hot encoding
+dummies <- dummyVars(~ ., data = reduced_survey_data1)
+encoded_data <- predict(dummies, newdata = reduced_survey_data1)
+encoded_data <- as.data.frame(encoded_data)
 
-# Perform K-means clustering with the chosen number of clusters
-set.seed(123)  # For reproducibility
-kmeans_result <- kmeans(data_for_clustering, centers = 3)  # Change 'centers' to the number of clusters you chose
+# Normalize the data
+scaled_data <- scale(encoded_data)
 
-# Add cluster results to the original data
-survey_analysis_data$cluster <- kmeans_result$cluster
+# Set seed for reproducibility
+set.seed(123)
 
-# Visualize clustering results
-fviz_cluster(kmeans_result, data = data_for_clustering)
+# Perform k-means clustering (you can adjust the number of clusters)
+k <- 3  # Number of clusters
+kmeans_result <- kmeans(scaled_data, centers = k, nstart = 25)
+
+# Add cluster assignments to the original data
+reduced_survey_data1$Cluster <- kmeans_result$cluster
+
+
+# Load necessary library for visualization
+library(ggplot2)
+
+# Perform PCA for dimensionality reduction
+pca <- prcomp(scaled_data)
+pca_data <- as.data.frame(pca$x[, 1:2])  # Select the first two principal components
+pca_data$Cluster <- factor(reduced_survey_data1$Cluster)
+
+# Plot the clusters
+ggplot(pca_data, aes(x = PC1, y = PC2, color = Cluster)) +
+  geom_point() +
+  labs(title = "PCA of Clusters", x = "Principal Component 1", y = "Principal Component 2") +
+  theme_minimal()
+
 ```
 
 
@@ -168,61 +139,17 @@ fviz_cluster(kmeans_result, data = data_for_clustering)
 PCA
 
 ```{r}
-# Load necessary library
-library(ggplot2)
-
-# Assuming 'survey_analysis_data' is your data frame
-# Remove non-numeric columns
-numeric_data <- survey_analysis_data[, sapply(survey_analysis_data, is.numeric)]
-
-# Standardize the data
-standardized_data <- scale(numeric_data)
-
 # Perform PCA
-pca_result <- prcomp(standardized_data, center = TRUE, scale. = TRUE)
+pca_result <- prcomp(scaled_data, center = TRUE, scale. = TRUE)
 
-# Scree plot
+# View summary of PCA
+summary(pca_result)
+# Plot a scree plot
 screeplot(pca_result, main = "Scree Plot")
-
-# Biplot
-biplot(pca_result, main = "PCA Biplot")
-
-# Extract PCA scores
-pca_scores <- pca_result$x
-
-# Create a data frame for plotting
-pca_df <- data.frame(PC1 = pca_scores[, 1], PC2 = pca_scores[, 2])
-
-# Plot PCA scores
-ggplot(pca_df, aes(x = PC1, y = PC2)) +
-  geom_point() +
-  labs(title = "PCA Score Plot", x = "Principal Component 1", y = "Principal Component 2") +
-  theme_minimal()
+# Plot a biplot
+biplot(pca_result, scale = 0)
 
 
-```
-
-
-correlatoin plot
-
-```{r}
-
-# Install necessary packages if not already installed
-if (!require(corrplot)) install.packages("corrplot")
-
-# Load package
-library(corrplot)
-
-# Extract numeric columns
-numeric_data <- survey_analysis_data %>% select_if(is.numeric)
-
-# Calculate correlation matrix
-cor_matrix <- cor(numeric_data, use = "pairwise.complete.obs")
-
-# Plot correlation matrix
-corrplot(cor_matrix, method = "color", type = "full", 
-         tl.col = "black", tl.srt = 45, 
-         title = "Correlation Plot", mar = c(0,0,1,0))
 
 ```
 
@@ -233,69 +160,71 @@ logistic regression models
 
 
 ```{r}
-presidential_vote_model <- glm(
-  formula = vote_biden ~ sex + age_bracket + races + race_hispanic + education_level + urban,
-  data = survey_analysis_data,
-  family = binomial(link = "logit"),
-  #control = glm.control(maxit = 25) # Optional: to control convergence issues
-)
+# Load necessary libraries
+library(dplyr)
+library(caTools)
+library(nnet)  # For multinom
+library(pROC)  # For ROC curves
 
-summary(presidential_vote_model)
+# Prepare data
+data <- reduced_survey_data1 %>%
+  mutate(
+    pid3 = factor(pid3),
+    pid7 = factor(pid7),
+    presvote16post = factor(presvote16post),
+    presvote20post = factor(presvote20post),
+    ideo5 = factor(ideo5),
+    gender = factor(gender),
+    race = factor(race),
+    hispanic = factor(hispanic),
+    educ = factor(educ),
+    marstat = factor(marstat),
+    employ = factor(employ),
+    inputstate = factor(inputstate),
+    urbanicity2 = factor(urbanicity2),
+    Cluster = factor(Cluster)
+  ) %>%
+  na.omit()
 
-# Load necessary library
-library(ggplot2)
+# Split data
+set.seed(123)
+split <- sample.split(data$Cluster, SplitRatio = 0.7)
+train_data <- subset(data, split == TRUE)
+test_data <- subset(data, split == FALSE)
 
-# Extract coefficients and their significance
-coef_summary <- summary(presidential_vote_model)$coefficients
-coef_df <- data.frame(
-  Predictor = rownames(coef_summary),
-  Estimate = coef_summary[, "Estimate"],
-  StdError = coef_summary[, "Std. Error"],
-  Significance = coef_summary[, "Pr(>|z|)"]
-)
+# Fit multi-class logistic regression model
+logistic_model <- multinom(Cluster ~ ., data = train_data)
+summary(logistic_model)
 
-# Add a significance level column
-coef_df$SignificanceLevel <- cut(coef_df$Significance,
-                                 breaks = c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf),
-                                 labels = c("***", "**", "*", ".", "ns"))
+# Predict and evaluate
+predictions <- predict(logistic_model, test_data, type = "class")
+conf_matrix <- table(predicted = predictions, actual = test_data$Cluster)
+print(conf_matrix)
 
-# Plot
-ggplot(coef_df, aes(x = reorder(Predictor, Estimate), y = Estimate, color = SignificanceLevel)) +
-  geom_point(size = 3) +
-  geom_errorbar(aes(ymin = Estimate - 1.96 * StdError, ymax = Estimate + 1.96 * StdError), width = 0.2) +
-  coord_flip() +
-  labs(title = "Coefficient Plot",
-       x = "Predictor",
-       y = "Estimate") +
-  theme_minimal()
+accuracy <- sum(predictions == test_data$Cluster) / nrow(test_data)
+cat("Accuracy:", accuracy, "\n")
+
+
 
 ```
+roc curve
+```{r}
+library(pROC)
 
-scatter plots
+# Assuming the model predictions are probabilities
+prob_predictions <- predict(logistic_model, test_data, type = "probs")
 
-```{r, echo=FALSE}
-# Create a new dataset for predictions with varying 'education_level'
-education_levels <- unique(survey_analysis_data$education_level)
-new_data <- expand.grid(
-  sex = "female",
-  age_bracket = "30-44",
-  races = "white",
-  race_hispanic = "not hispanic",
-  education_level = education_levels,
-  urban = "urban"
-)
+# Convert the true class labels to a binary matrix for ROC calculation
+roc_list <- list()
+for (class in levels(test_data$Cluster)) {
+  roc_list[[class]] <- roc(test_data$Cluster == class, prob_predictions[, class])
+}
 
-# Predict probabilities
-new_data$probability <- predict(presidential_vote_model, new_data, type = "response")
-
-# Plot the effect of 'education_level'
-ggplot(new_data, aes(x = education_level, y = probability, color = education_level)) +
-  geom_line() +
-  geom_point(size = 3) +
-  labs(title = "Probability of Voting for Biden by Education Level",
-       x = "Education Level",
-       y = "Probability") +
-  theme_minimal()
-
+# Plot ROC curves
+plot(roc_list[[1]], col = 1, main = "ROC Curves for Multi-Class Logistic Regression")
+for (i in 2:length(roc_list)) {
+  lines(roc_list[[i]], col = i)
+}
+legend("bottomright", legend = levels(test_data$Cluster), col = 1:length(roc_list), lty = 1)
 
 ```
