@@ -15,7 +15,7 @@ library(haven)
 library(arrow)
 
 # Read in the raw data
-raw_survey_data <- read_csv("/cloud/project/2024-week26.csv")
+raw_survey_data <- read_csv("/cloud/project/2024-week28.csv")
 # Add labels
 raw_survey_data <- labelled::to_factor(raw_survey_data)
 
@@ -45,6 +45,7 @@ reduced_survey_data1 <- raw_survey_data |>
 
 ```
 
+
 2. EDA-bar plots
 
 ```{r cars}
@@ -55,9 +56,9 @@ bar plot by state : north dakota missing
 
 ```{r}
 # Create a vector of state classifications
-red_states <- c("Alabama", "Alaska", "Arkansas", "Idaho", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Mississippi", "Missouri", "Montana", "Nebraska", "North Dakota", "Oklahoma", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "West Virginia", "Wyoming")
-blue_states <- c("California", "Connecticut", "Delaware", "Hawaii", "Illinois", "Maine", "Maryland", "Massachusetts", "Minnesota", "New Jersey", "New Mexico", "New York", "Oregon", "Rhode Island", "Vermont", "Virginia", "Washington")
-swing_states <- c("Arizona", "Colorado", "Florida", "Georgia", "Michigan", "Nevada", "New Hampshire", "North Carolina", "Ohio", "Pennsylvania", "Wisconsin")
+red_states <- c("Alabama", "Alaska", "Arkansas", "Idaho", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Mississippi", "Missouri", "Montana", "Nebraska", "North Dakota", "Oklahoma", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "West Virginia", "Wyoming","Florida", "Ohio")
+blue_states <- c("California", "Connecticut", "Delaware", "Hawaii", "Illinois", "Maine", "Maryland", "Massachusetts", "Minnesota", "New Jersey", "New Mexico", "New York", "Oregon", "Rhode Island", "Vermont", "Virginia", "Washington","Colorado", "New Hampshire","District of Columbia")
+swing_states <- c("Arizona",  "Georgia", "Michigan", "Nevada", "North Carolina", "Pennsylvania", "Wisconsin")
 
 # Load necessary library
 library(ggplot2)
@@ -228,3 +229,5 @@ for (i in 2:length(roc_list)) {
 legend("bottomright", legend = levels(test_data$Cluster), col = 1:length(roc_list), lty = 1)
 
 ```
+
+power curve two sample
