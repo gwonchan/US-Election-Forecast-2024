@@ -37,9 +37,6 @@ my_tibble_clean1 <- my_tibble_clean[-nrow(my_tibble_clean), ]
 colnames(my_tibble_clean1) <- c("State", "Electoral_Votes", "For_President1", "For_President2", "For_Vice_President1", "For_Vice_President2")
 
 
-
-plot(my_tibble_clean1$Electoral_Votes,my_tibble_clean1$State)
-
 print(my_tibble_clean1$State)
 
 
@@ -61,10 +58,40 @@ my_tibble_clean1 <- my_tibble_clean1[!is.na(my_tibble_clean1$Electoral_Votes), ]
 
 
 
+
+# Clean and sort the tibble by Electoral Votes in ascending order
+my_tibble_clean1 <- my_tibble_clean1 %>%
+  arrange(Electoral_Votes)
+
+# Print the cleaned and sorted tibble
+print(my_tibble_clean1)
+
+
+# Create a data frame for states with less than 5 electoral votes
+states_data <- data.frame(
+  State = c("Delaware", "South Dakota", "North Dakota", "Montana", "Vermont",
+            "Wyoming", "Alaska", "New Hampshire", "Idaho", "Hawaii", 
+            "Maine", "Rhode Island", "West Virginia"),
+  Republicans = c(0, 3, 3, 2, 0, 3, 3, 0, 4, 0, 1, 0, 4),
+  Democrats = c(3, 0, 0, 1, 2, 0, 0, 4, 0, 3, 1, 4, 0),
+  Independents = c(0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0)
+)
+
+# Print the data frame
+print(states_data)
+
+# Calculate total counts
+total_counts <- colSums(states_data[, -1]) # Exclude the State column
+names(total_counts) <- c("Total Republicans", "Total Democrats", "Total Independents")
+
+# Print total counts
+print(total_counts)
+
+
+
 # Create a bar plot of Electoral Votes by State
 barplot(my_tibble_clean1$Electoral_Votes, 
         names.arg = my_tibble_clean1$State,  # Add state names to x-axis
-        xlab = "State", 
         ylab = "Electoral Votes", 
         main = "Electoral Votes by State at 2020",
         las = 2,  # Rotate x-axis labels
